@@ -1,10 +1,13 @@
 package main
 
-import {
-	"fmt",
+import (
+	"fmt"
+
 	"github.com/Heian0/LeGoTradingEngine/internal/orderbook"
-}
+)
 
 func main() {
-	order := orderbook.MarketAskOrder(0, 0, 10, orderbook.OrderTimeInForce.FillOrKill)
+	testOrder := orderbook.MarketAskOrder(0, 0, 10, orderbook.FillOrKill)
+	testOrder.ExecuteOrder(10, 0)
+	fmt.Println(testOrder.IsFilled())
 }
