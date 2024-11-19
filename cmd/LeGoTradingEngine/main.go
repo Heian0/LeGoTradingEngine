@@ -7,7 +7,9 @@ import (
 )
 
 func main() {
-	testOrder := orderbook.MarketAskOrder(0, 0, 10, orderbook.FillOrKill)
-	testOrder.ExecuteOrder(10, 0)
-	fmt.Println(testOrder.IsFilled())
+	lvlMap := orderbook.NewLevelMap()
+	lvlMap.Put(0, orderbook.NewLevel(orderbook.Ask, 100, 420))
+	lvlMap.Put(3, orderbook.NewLevel(orderbook.Ask, 100, 420))
+	lvlMap.Emplace(2, orderbook.Bid, 788)
+	fmt.Println(lvlMap.String())
 }

@@ -42,7 +42,7 @@ func (level Level) ValidateLevel() bool {
 	return true
 }
 
-func NewLevel(levelSide Side, price, symbolId uint64) Level {
+func NewLevel(levelSide Side, price uint64, symbolId uint64) Level {
 	level := Level{
 		levelSide: levelSide,
 		price:     price,
@@ -67,7 +67,7 @@ func (level Level) GetOrdersConst() *list.List {
 }
 */
 
-func (level *Level) AddOrder(order Order) {
+func (level *Level) AddOrder(order *Order) {
 	if level.levelSide != order.orderSide {
 		print("Order is not on the same side as level")
 		return
@@ -109,7 +109,7 @@ func (level *Level) PopBack() {
 	}
 }
 
-func (level *Level) DeleteOrder(orderToRemove Order) {
+func (level *Level) DeleteOrder(orderToRemove *Order) {
 	if level.orders.Len() == 0 {
 		panic("No orders to delete!")
 	}
@@ -152,4 +152,8 @@ func (level *Level) Back() *Order {
 		panic("Level is empty")
 	}
 	return level.orders.Back().Value.(*Order)
+}
+
+func (level *Level) Empty() bool {
+	return level.orders.Len() == 0
 }

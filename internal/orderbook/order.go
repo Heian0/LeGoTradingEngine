@@ -87,6 +87,7 @@ type Order struct {
 	executedQuantity     uint64
 	openQuantity         uint64
 	lastExecutedQuantity uint64
+	levelPtr             *Level
 }
 
 // OrderToString returns a formatted string with Order details
@@ -241,28 +242,28 @@ func (order *Order) ExecuteOrder(_quantity uint64, _price uint64) {
 	order.lastExecutedQuantity = _quantity
 }
 
-func (order Order) IsAsk() bool { return order.orderSide == Ask }
+func (order *Order) IsAsk() bool { return order.orderSide == Ask }
 
-func (order Order) IsBid() bool { return order.orderSide == Bid }
+func (order *Order) IsBid() bool { return order.orderSide == Bid }
 
-func (order Order) IsMarket() bool { return order.orderType == Market }
+func (order *Order) IsMarket() bool { return order.orderType == Market }
 
-func (order Order) IsLimit() bool { return order.orderType == Limit }
+func (order *Order) IsLimit() bool { return order.orderType == Limit }
 
-func (order Order) IsStop() bool { return order.orderType == Stop }
+func (order *Order) IsStop() bool { return order.orderType == Stop }
 
-func (order Order) IsStopLimit() bool { return order.orderType == StopLimit }
+func (order *Order) IsStopLimit() bool { return order.orderType == StopLimit }
 
-func (order Order) IsTrailingStop() bool { return order.orderType == TrailingStop }
+func (order *Order) IsTrailingStop() bool { return order.orderType == TrailingStop }
 
-func (order Order) IsTrailingStopLimit() bool { return order.orderType == TrailingStopLimit }
+func (order *Order) IsTrailingStopLimit() bool { return order.orderType == TrailingStopLimit }
 
-func (order Order) IsGoodTillCancel() bool { return order.orderTimeInForce == GoodTillCancel }
+func (order *Order) IsGoodTillCancel() bool { return order.orderTimeInForce == GoodTillCancel }
 
-func (order Order) IsImmediateOrCancel() bool { return order.orderTimeInForce == ImmediateOrCancel }
+func (order *Order) IsImmediateOrCancel() bool { return order.orderTimeInForce == ImmediateOrCancel }
 
-func (order Order) IsFillOrKill() bool { return order.orderTimeInForce == FillOrKill }
+func (order *Order) IsFillOrKill() bool { return order.orderTimeInForce == FillOrKill }
 
-func (order Order) IsFilled() bool { return order.openQuantity == 0 }
+func (order *Order) IsFilled() bool { return order.openQuantity == 0 }
 
-func (order Order) Equals(otherOrder Order) bool { return order.id == otherOrder.id }
+func (order *Order) Equals(otherOrder *Order) bool { return order.id == otherOrder.id }
