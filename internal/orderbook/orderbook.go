@@ -367,11 +367,11 @@ func (orderBook *OrderBook) Match(order *Order) {
 		bidLevelsIt := orderBook.bidLevels.levelMapIterator
 		askOrder := order
 		for bidLevelsIt.Prev() && bidLevelsIt.Key().(uint64) >= askOrder.price && !askOrder.IsFilled() {
-			bidLevel := bidLevelsIt.Value().(*Order)
-			bidOrder := bidLevel.levelPtr.Front()
+			bidLevel := bidLevelsIt.Value().(*Level)
+			bidOrder := bidLevel.Front()
 			executingPrice := bidOrder.price
 			orderBook.ExecuteOrders(askOrder, bidOrder, executingPrice)
-			bidLevel.levelPtr.ReduceVolume(bidOrder.lastExecutedQuantity)
+			bidLevel.ReduceVolume(bidOrder.lastExecutedQuantity)
 			if bidOrder.IsFilled() {
 				orderBook.DeleteOrder(bidOrder.id, true)
 			}
@@ -383,11 +383,11 @@ func (orderBook *OrderBook) Match(order *Order) {
 		askLevelsIt := orderBook.askLevels.levelMapIterator
 		bidOrder := order
 		for askLevelsIt.Next() && askLevelsIt.Key().(uint64) <= bidOrder.price && !bidOrder.IsFilled() {
-			askLevel := askLevelsIt.Value().(*Order)
-			askOrder := askLevel.levelPtr.Front()
+			askLevel := askLevelsIt.Value().(*Level)
+			askOrder := askLevel.Front()
 			executingPrice := askOrder.price
 			orderBook.ExecuteOrders(askOrder, bidOrder, executingPrice)
-			askLevel.levelPtr.ReduceVolume(askOrder.lastExecutedQuantity)
+			askLevel.ReduceVolume(askOrder.lastExecutedQuantity)
 			if askOrder.IsFilled() {
 				orderBook.DeleteOrder(askOrder.id, true)
 			}
@@ -630,7 +630,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.bidLevels.SetMapBegin()
 	itr = orderBook.bidLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	// Ask orders
@@ -638,7 +638,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.askLevels.SetMapBegin()
 	itr = orderBook.askLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	// Stop bid orders
@@ -646,7 +646,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.stopBidLevels.SetMapBegin()
 	itr = orderBook.stopBidLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	// Stop ask orders
@@ -654,7 +654,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.stopAskLevels.SetMapBegin()
 	itr = orderBook.stopAskLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	// Trailing stop bid orders
@@ -662,7 +662,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.trailingStopBidLevels.SetMapBegin()
 	itr = orderBook.trailingStopBidLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	// Trailing stop ask orders
@@ -670,7 +670,7 @@ func (orderBook *OrderBook) String() string {
 	orderBook.trailingStopAskLevels.SetMapBegin()
 	itr = orderBook.trailingStopAskLevels.levelMapIterator
 	for itr.Next() {
-		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+		bookString.WriteString(itr.Value().(*Level).String())
 	}
 
 	return bookString.String()

@@ -35,12 +35,12 @@ func (lvlMap *LevelMap) PutWithHint(price uint64, level *Level, hint *rbt.Node) 
 	lvlMap.levelMap.PutWithHint(price, level, hint)
 }
 
-func (lvlMap *LevelMap) Get(price uint64) (Level, bool) {
+func (lvlMap *LevelMap) Get(price uint64) (*Level, bool) {
 	levelInterface, found := lvlMap.levelMap.Get(price)
 	if !found {
-		return Level{}, false
+		return nil, false
 	}
-	level, isLevelType := levelInterface.(Level)
+	level, isLevelType := levelInterface.(*Level)
 	if !isLevelType {
 		panic("Found a non level object in LevelMap")
 	}
@@ -53,11 +53,13 @@ func (lvlMap *LevelMap) Delete(price uint64) {
 
 func (lvlMap *LevelMap) Emplace(price uint64, levelSide Side, symbolId uint64) *Level {
 	levelInterface, levelInMap := lvlMap.levelMap.Get(price)
-	level, isLevelType := levelInterface.(Level)
-	if !isLevelType {
-		panic("Found a non level object in LevelMap")
-	}
 	if levelInMap {
+		level, isLevelType := levelInterface.(Level)
+		if !isLevelType {
+			if !lvlMap.levelMap.Empty() {
+				panic("Found a non level object in LevelMap")
+			}
+		}
 		return &level
 	}
 	newLevel := NewLevel(levelSide, price, symbolId)
@@ -84,7 +86,7 @@ func (lvlMap *LevelMap) GetMapBegin() *rbt.Node {
 		levelNode := lvlMap.levelMapIterator.Node()
 		return levelNode
 	}
-	panic("No beginning element exists")
+	return nil
 }
 
 func (lvlMap *LevelMap) GetMapEnd() *rbt.Node {
@@ -93,21 +95,23 @@ func (lvlMap *LevelMap) GetMapEnd() *rbt.Node {
 		levelNode := lvlMap.levelMapIterator.Node()
 		return levelNode
 	}
-	panic("No ending element exists")
+	return nil
 }
 
 func (lvlMap *LevelMap) EmplaceWithHint(price uint64, levelSide Side, symbolId uint64, hint *rbt.Node) *Level {
 	levelInterface, levelInMap := lvlMap.levelMap.Get(price)
-	level, isLevelType := levelInterface.(Level)
-	if !isLevelType {
-		panic("Found a non level object in LevelMap")
-	}
 	if levelInMap {
+		level, isLevelType := levelInterface.(Level)
+		if !isLevelType {
+			if !lvlMap.levelMap.Empty() {
+				panic("Found a non level object in LevelMap")
+			}
+		}
 		return &level
 	}
 	newLevel := NewLevel(levelSide, price, symbolId)
 	ptr := &newLevel
-	lvlMap.levelMap.PutWithHint(price, newLevel, hint)
+	lvlMap.levelMap.PutWithHint(price, &newLevel, hint)
 	return ptr
 }
 

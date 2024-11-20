@@ -110,6 +110,9 @@ func (tree *Tree) PutWithHint(key interface{}, value interface{}, hint *Node) {
 		tree.Root = &Node{Key: key, Value: value, color: red}
 		insertedNode = tree.Root
 	} else {
+		if hint == nil {
+			hint = tree.Root
+		}
 		node := hint
 		loop := true
 		for loop {
