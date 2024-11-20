@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	rbt "github.com/Heian0/LeGoTradingEngine/internal/utils/redblacktree"
 	simplemath "github.com/Heian0/LeGoTradingEngine/internal/utils/simplemath"
 )
 
@@ -53,16 +54,13 @@ func (orderBook *OrderBook) AddOrder(order Order) {
 	switch order.orderType {
 	case Market:
 		orderBook.AddMarketOrder(&order)
-		break
 	case Limit:
 		orderBook.AddLimitOrder(&order)
-		break
 	case Stop:
 	case StopLimit:
 	case TrailingStop:
 	case TrailingStopLimit:
 		orderBook.AddStopOrder(&order)
-		break
 	}
 	orderBook.ActivateStopOrders()
 	orderBook.ValidateOrderbook()
@@ -284,7 +282,7 @@ func (orderBook *OrderBook) UpdateBidStopOrders() {
 			//Handle Order updated
 		}
 	}
-	orderBook.trailingStopBidLevels, newTrailingStopBidLevels = newTrailingStopBidLevels, orderBook.trailingStopBidLevels
+	orderBook.trailingStopBidLevels = newTrailingStopBidLevels
 	orderBook.trailingAskPrice = orderBook.lastExecutedPrice
 }
 
@@ -306,15 +304,56 @@ func (orderBook *OrderBook) UpdateAskStopOrders() {
 			//Handle Order updated
 		}
 	}
-	orderBook.trailingStopBidLevels, newTrailingStopAskLevels = newTrailingStopAskLevels, orderBook.trailingStopBidLevels
+	orderBook.trailingStopBidLevels = newTrailingStopAskLevels
 	orderBook.trailingAskPrice = orderBook.lastExecutedPrice
 }
 
-func (orderBook *OrderBook) DeleteOrder(orderId uint64) {
-
+func (orderBook *OrderBook) DelOrder(orderId uint64) {
+	orderBook.DeleteOrder(orderId, true)
+	orderBook.ActivateStopOrders()
+	orderBook.ValidateOrderbook()
 }
 
-func (orderBook *OrderBook) DeleteOrderNoti(orderId uint64, noti bool) {
+func (orderBook *OrderBook) DeleteOrder(orderId uint64, noti bool) {
+	order := orderBook.orders[orderId]
+	if order.orderType == Market {
+		fmt.Println("Should not be trying to delete a market order")
+		return
+	}
+	level := order.levelPtr
+
+	if noti {
+		// Handle order deleted
+	}
+
+	level.DeleteOrder(order)
+	if level.Empty() {
+		switch order.orderType {
+		case Limit:
+			if order.IsAsk() {
+				orderBook.askLevels.Delete(level.price)
+			} else {
+				orderBook.bidLevels.Delete(level.price)
+			}
+		case Stop:
+		case StopLimit:
+			if order.IsAsk() {
+				orderBook.stopAskLevels.Delete(level.price)
+			} else {
+				orderBook.stopBidLevels.Delete(level.price)
+			}
+		case TrailingStop:
+		case TrailingStopLimit:
+			if order.IsAsk() {
+				orderBook.trailingStopAskLevels.Delete(level.price)
+			} else {
+				orderBook.trailingStopBidLevels.Delete(level.price)
+			}
+		default:
+			panic("Code should never reach this point, you are trying to delete a market order")
+		}
+		delete(orderBook.orders, orderId)
+	}
 
 }
 
@@ -343,7 +382,7 @@ func (orderBook *OrderBook) Match(order *Order) {
 		orderBook.askLevels.SetMapBegin()
 		askLevelsIt := orderBook.askLevels.levelMapIterator
 		bidOrder := order
-		for askLevelsIt.Next() && askLevelsIt.Key().(uint64) <= bidOrder.price && !bidOrder.Filled() {
+		for askLevelsIt.Next() && askLevelsIt.Key().(uint64) <= bidOrder.price && !bidOrder.IsFilled() {
 			askLevel := askLevelsIt.Value().(*Order)
 			askOrder := askLevel.levelPtr.Front()
 			executingPrice := askOrder.price
@@ -392,39 +431,246 @@ func (orderBook *OrderBook) CanMatch(order *Order) bool {
 	return false
 }
 
+func (orderBook *OrderBook) ValidateOrderbook() {
+	orderBook.ValidateLimitOrders()
+	orderBook.ValidateStopOrders()
+	orderBook.ValidateTrailingStopOrders()
+}
+
+func (orderBook *OrderBook) ValidateLimitOrders() {
+	var currBestBid uint64
+	var currBestAsk uint64
+	if orderBook.askLevels.IsEmpty() {
+		currBestAsk = math.MaxUint64
+	} else {
+		currBestAsk = orderBook.askLevels.GetMapBegin().Value.(*Level).price
+	}
+	if orderBook.bidLevels.IsEmpty() {
+		currBestBid = math.MaxUint64
+	} else {
+		currBestBid = orderBook.askLevels.GetMapEnd().Value.(*Level).price
+	}
+	if currBestAsk > currBestBid {
+		panic("Best Ask should never be greater than best Bid")
+	}
+
+	orderBook.askLevels.SetMapBegin()
+	itr := orderBook.askLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no empty limit levels in the orderbook")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the limit level does not match with its key")
+		}
+		if level.levelSide != Ask {
+			panic("Limit evel with Bid side is in the ask side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a limit level")
+			}
+			if order.orderType != Limit {
+				panic("There is a non Limit type order in a Limit level")
+			}
+		}
+	}
+
+	orderBook.bidLevels.SetMapBegin()
+	itr = orderBook.bidLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no limit empty levels in the orderbook")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the limit level does not match with its key")
+		}
+		if level.levelSide != Bid {
+			panic("Limit level with Ask side is in the bid side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a limit level")
+			}
+			if order.orderType != Limit {
+				panic("There is a non Limit type order in a Limit level")
+			}
+		}
+	}
+}
+
+func (orderBook *OrderBook) ValidateStopOrders() {
+
+	orderBook.stopAskLevels.SetMapBegin()
+	itr := orderBook.stopAskLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no empty stop levels in the orderbook")
+		}
+		if level.price > orderBook.lastExecutedPrice {
+			panic("Stop ask order has a stop price that is greater than the last executed price, but was not stopped")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the stop level does not match with its key")
+		}
+		if level.levelSide != Ask {
+			panic("Stop level with Bid side is in the ask side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a stop level")
+			}
+			if order.orderType != Stop && order.orderType != StopLimit {
+				panic("There is a non Stop type order in a Stop level")
+			}
+		}
+	}
+
+	orderBook.stopBidLevels.SetMapBegin()
+	itr = orderBook.stopBidLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no empty stop levels in the orderbook")
+		}
+		if level.price < orderBook.lastExecutedPrice {
+			panic("Stop bid order has a stop price that is less than the last executed price, but was not stopped")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the stop level does not match with its key")
+		}
+		if level.levelSide != Bid {
+			panic("Stop level with Ask side is in the bid side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a stop level")
+			}
+			if order.orderType != Stop && order.orderType != StopLimit {
+				panic("There is a non Stop type order in a Stop level")
+			}
+		}
+	}
+}
+
+func (orderBook *OrderBook) ValidateTrailingStopOrders() {
+
+	orderBook.trailingStopAskLevels.SetMapBegin()
+	itr := orderBook.trailingStopAskLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no empty trailing stop levels in the orderbook")
+		}
+		if level.price > orderBook.lastExecutedPrice {
+			panic("trailing stop ask order has a trailing stop price that is greater than the last executed price, but was not stopped")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the trailing stop level does not match with its key")
+		}
+		if level.levelSide != Ask {
+			panic("trailing stop level with Bid side is in the ask side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a trailing stop level")
+			}
+			if order.orderType != TrailingStop && order.orderType != TrailingStopLimit {
+				panic("There is a non trailing stop type order in a trailing stop level")
+			}
+		}
+	}
+
+	orderBook.trailingStopBidLevels.SetMapBegin()
+	itr = orderBook.trailingStopBidLevels.levelMapIterator
+	for itr.Next() {
+		level := itr.Value().(*Level)
+		if level.Empty() {
+			panic("There should be no empty trailing stop levels in the orderbook")
+		}
+		if level.price < orderBook.lastExecutedPrice {
+			panic("Trailing stop bid order has a stop price that is less than the last executed price, but was not stopped")
+		}
+		if level.price != itr.Key().(uint64) {
+			panic("The price of the trailing stop level does not match with its key")
+		}
+		if level.levelSide != Bid {
+			panic("trailing stop level with Ask side is in the bid side of the book")
+		}
+		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
+			order := ord.Value.(*Order)
+			if order.IsFilled() {
+				panic("There should be no filled orders in a trailing stop level")
+			}
+			if order.orderType != TrailingStop && order.orderType != TrailingStopLimit {
+				panic("There is a non trailing stop type order in a trailing stop level")
+			}
+		}
+	}
+}
+
 func (orderBook *OrderBook) String() string {
 	var bookString strings.Builder
 	bookString.WriteString("SYMBOL ID : " + strconv.FormatUint(orderBook.symbolId, 10) + "\n")
-	bookString.WriteString("LAST TRADED PRICE: " + fmt.Sprintf("%f", book.lastExecutedPrice) + "\n")
+	bookString.WriteString("LAST TRADED PRICE: " + fmt.Sprintf("%.2f", float64(orderBook.lastExecutedPrice)) + "\n")
+
+	//Set iterator
+	var itr rbt.Iterator
 
 	// Bid orders
 	bookString.WriteString("BID ORDERS\n")
-	for price, level := range orderBook.bidLevels {
-		bookString.WriteString(level.String() + "\n")
+	orderBook.bidLevels.SetMapBegin()
+	itr = orderBook.bidLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
 	}
 
 	// Ask orders
 	bookString.WriteString("ASK ORDERS\n")
-	for price, level := range book.adkLevels {
-		bookString.WriteString(level.String() + "\n")
+	orderBook.askLevels.SetMapBegin()
+	itr = orderBook.askLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
 	}
 
-	// Ask stop order
-	bookString.WriteString("ASK STOP ORDERS\n")
-	for _, level := range book.stopAskLevels {
-		bookString.WriteString(level.String())
+	// Stop bid orders
+	bookString.WriteString("STOP BID ORDERS\n")
+	orderBook.stopBidLevels.SetMapBegin()
+	itr = orderBook.stopBidLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
 	}
 
-	// Bid trailing stop orders
-	bookString.WriteString("BID TRAILING STOP ORDERS\n")
-	for price, level := range book.trailingStopBidLevels {
-		bookString.WriteString(level.String())
+	// Stop ask orders
+	bookString.WriteString("STOP ASK ORDERS\n")
+	orderBook.stopAskLevels.SetMapBegin()
+	itr = orderBook.stopAskLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
 	}
 
-	// ASK TRAILING STOP ORDERS
-	sb.WriteString("ASK TRAILING STOP ORDERS\n")
-	for _, level := range book.trailingStopAskLevels {
-		sb.WriteString(level.toString())
+	// Trailing stop bid orders
+	bookString.WriteString("TRAILING STOP BID ORDERS\n")
+	orderBook.trailingStopBidLevels.SetMapBegin()
+	itr = orderBook.trailingStopBidLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
+	}
+
+	// Trailing stop ask orders
+	bookString.WriteString("TRAILING STOP ASK ORDERS\n")
+	orderBook.trailingStopAskLevels.SetMapBegin()
+	itr = orderBook.trailingStopAskLevels.levelMapIterator
+	for itr.Next() {
+		bookString.WriteString(itr.Value().(*Level).String() + "\n")
 	}
 
 	return bookString.String()

@@ -7,9 +7,17 @@ import (
 )
 
 func main() {
-	lvlMap := orderbook.NewLevelMap()
-	lvlMap.Put(0, orderbook.NewLevel(orderbook.Ask, 100, 420))
-	lvlMap.Put(3, orderbook.NewLevel(orderbook.Ask, 100, 420))
-	lvlMap.Emplace(2, orderbook.Bid, 788)
-	fmt.Println(lvlMap.String())
+	ob1 := orderbook.NewOrderbook(999)
+	ob2 := orderbook.NewOrderbook(111)
+	newOrder1 := orderbook.LimitAskOrder(1, 999, 100, 10, orderbook.GoodTillCancel)
+	newOrder2 := orderbook.LimitAskOrder(1, 111, 100, 0, orderbook.GoodTillCancel)
+	ob1.AddMarketOrder(&newOrder1)
+	ob2.AddMarketOrder(&newOrder2)
+
+	newOrder11 := orderbook.LimitBidOrder(1, 999, 100, 1, orderbook.GoodTillCancel)
+	ob1.AddMarketOrder(&newOrder11)
+
+	fmt.Println(ob1.String())
+	fmt.Println("---------------------")
+	fmt.Println(ob2.String())
 }
