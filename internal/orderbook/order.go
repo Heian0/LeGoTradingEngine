@@ -119,12 +119,12 @@ func (order Order) ValidateOrder() bool {
 			return false
 		}
 	case Stop:
-		if order.orderTimeInForce == GoodTillCancel {
+		if order.orderTimeInForce == FillOrKill {
 			fmt.Printf("Invalid Stop order, please review the following order (id: %v, symbolId: %v, quantity: %v, stopPrice: %v, orderTimeInForce: %v)\n", order.id, order.symbolId, order.quantity, order.stopPrice, order.orderTimeInForce)
 			return false
 		}
 	case TrailingStop:
-		if order.orderTimeInForce == GoodTillCancel {
+		if order.orderTimeInForce == FillOrKill {
 			fmt.Printf("Invalid Trailing Stop order, please review the following order (id: %v, symbolId: %v, quantity: %v, trailingAmount: %v, orderTimeInForce: %v)\n", order.id, order.symbolId, order.quantity, order.trailingAmount, order.orderTimeInForce)
 			return false
 		}

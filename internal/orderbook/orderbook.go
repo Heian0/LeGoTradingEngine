@@ -50,17 +50,14 @@ func (orderBook *OrderBook) LastExecutedPriceAsk() uint64 {
 	}
 }
 
-func (orderBook *OrderBook) AddOrder(order Order) {
+func (orderBook *OrderBook) AddOrder(order *Order) {
 	switch order.orderType {
 	case Market:
-		orderBook.AddMarketOrder(&order)
+		orderBook.AddMarketOrder(order)
 	case Limit:
-		orderBook.AddLimitOrder(&order)
-	case Stop:
-	case StopLimit:
-	case TrailingStop:
-	case TrailingStopLimit:
-		orderBook.AddStopOrder(&order)
+		orderBook.AddLimitOrder(order)
+	case Stop, StopLimit, TrailingStop, TrailingStopLimit:
+		orderBook.AddStopOrder(order)
 	}
 	orderBook.ActivateStopOrders()
 	orderBook.ValidateOrderbook()
@@ -135,9 +132,9 @@ func (orderBook *OrderBook) InsertLimitOrder(order *Order) {
 func (orderBook *OrderBook) InsertStopOrder(order *Order) {
 	var lvlPtr *Level
 	if order.IsAsk() {
-		lvlPtr = orderBook.stopAskLevels.Emplace(order.price, Ask, order.symbolId)
+		lvlPtr = orderBook.stopAskLevels.Emplace(order.stopPrice, Ask, order.symbolId)
 	} else {
-		lvlPtr = orderBook.stopAskLevels.Emplace(order.price, Bid, order.symbolId)
+		lvlPtr = orderBook.stopBidLevels.Emplace(order.stopPrice, Bid, order.symbolId)
 	}
 	order.levelPtr = lvlPtr
 	orderBook.orders[order.id] = order
