@@ -1,0 +1,54 @@
+syntax = "proto3";
+package exchange;
+
+enum Command {
+    ADD = 0;  // The default value
+    DELETE = 1;
+    REPLACE = 2;
+    CANCEL = 3;
+}
+
+enum OrderType {
+    LIMIT = 0;  // The default value
+    MARKET = 1;
+    STOP = 2;
+    STOP_LIMIT = 3;
+    TRAILING_STOP = 4;
+    TRAILING_STOP_LIMIT = 5;
+}
+
+enum OrderTimeInForce {
+	GTC = 0;
+    IOC = 1;
+    FOK = 2;
+}
+
+enum Side {
+    BID = 0;
+    ASK = 1;
+}
+
+message OrderMessage {
+    // Add, Delete, Cancel, Replace, etc
+    Command command = 1;
+    OrderType orderType = 2;
+    Side orderSide= 3;
+    OrderTimeInForce orderTimeInForce = 4;
+    uint64 id = 5;
+    uint64 symbolId = 6;
+    uint64 price = 7;
+    uint64 stopPrice = 8;
+    uint64 trailingAmount = 9;
+    uint64 lastExecutedPrice = 10;
+    uint64 quantity = 11;
+    uint64 openQuantity = 12;
+    uint64 lastExecutedQuantity = 13;
+}
+
+message OrderResponseMessage {
+    string exchangeStatus = 1;
+}
+
+service ExchangeService {
+    rpc HandleOrder(OrderMessage) returns (OrderResponseMessage) {}
+}

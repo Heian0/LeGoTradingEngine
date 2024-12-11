@@ -54,13 +54,13 @@ func (lvlMap *LevelMap) Delete(price uint64) {
 func (lvlMap *LevelMap) Emplace(price uint64, levelSide Side, symbolId uint64) *Level {
 	levelInterface, levelInMap := lvlMap.levelMap.Get(price)
 	if levelInMap {
-		level, isLevelType := levelInterface.(Level)
+		level, isLevelType := levelInterface.(*Level)
 		if !isLevelType {
 			if !lvlMap.levelMap.Empty() {
 				panic("Found a non level object in LevelMap")
 			}
 		}
-		return &level
+		return level
 	}
 	newLevel := NewLevel(levelSide, price, symbolId)
 	ptr := &newLevel
@@ -101,13 +101,13 @@ func (lvlMap *LevelMap) GetMapEnd() *rbt.Node {
 func (lvlMap *LevelMap) EmplaceWithHint(price uint64, levelSide Side, symbolId uint64, hint *rbt.Node) *Level {
 	levelInterface, levelInMap := lvlMap.levelMap.Get(price)
 	if levelInMap {
-		level, isLevelType := levelInterface.(Level)
+		level, isLevelType := levelInterface.(*Level)
 		if !isLevelType {
 			if !lvlMap.levelMap.Empty() {
 				panic("Found a non level object in LevelMap")
 			}
 		}
-		return &level
+		return level
 	}
 	newLevel := NewLevel(levelSide, price, symbolId)
 	ptr := &newLevel

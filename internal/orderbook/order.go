@@ -2,6 +2,8 @@ package orderbook
 
 import (
 	"fmt"
+
+	simplemath "github.com/Heian0/LeGoTradingEngine/internal/utils/simplemath"
 )
 
 type OrderType int
@@ -267,3 +269,65 @@ func (order *Order) IsFillOrKill() bool { return order.orderTimeInForce == FillO
 func (order *Order) IsFilled() bool { return order.openQuantity == 0 }
 
 func (order *Order) Equals(otherOrder *Order) bool { return order.id == otherOrder.id }
+
+func (o *Order) GetOrderType() OrderType {
+	return o.orderType
+}
+
+func (o *Order) GetOrderSide() Side {
+	return o.orderSide
+}
+
+func (o *Order) GetOrderTimeInForce() OrderTimeInForce {
+	return o.orderTimeInForce
+}
+
+func (o *Order) GetId() uint64 {
+	return o.id
+}
+
+func (o *Order) GetSymbolId() uint64 {
+	return o.symbolId
+}
+
+func (o *Order) GetPrice() uint64 {
+	return o.price
+}
+
+func (o *Order) GetStopPrice() uint64 {
+	return o.stopPrice
+}
+
+func (o *Order) GetTrailingAmount() uint64 {
+	return o.trailingAmount
+}
+
+func (o *Order) GetLastExecutedPrice() uint64 {
+	return o.lastExecutedPrice
+}
+
+func (o *Order) GetQuantity() uint64 {
+	return o.quantity
+}
+
+func (o *Order) GetExecutedQuantity() uint64 {
+	return o.executedQuantity
+}
+
+func (o *Order) GetOpenQuantity() uint64 {
+	return o.openQuantity
+}
+
+func (o *Order) GetLastExecutedQuantity() uint64 {
+	return o.lastExecutedQuantity
+}
+
+func (o *Order) GetLevelPtr() *Level {
+	return o.levelPtr
+}
+
+func (o *Order) ReduceQuantity(quantity uint64) {
+	q := simplemath.Min(quantity, o.openQuantity)
+	o.openQuantity -= q
+	o.ValidateOrder()
+}

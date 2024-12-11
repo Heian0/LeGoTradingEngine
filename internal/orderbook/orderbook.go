@@ -24,8 +24,8 @@ type OrderBook struct {
 	trailingStopBidLevels *LevelMap
 }
 
-func NewOrderbook(_symbolId uint64) OrderBook {
-	return OrderBook{
+func NewOrderbook(_symbolId uint64) *OrderBook {
+	return &OrderBook{
 		symbolId:              _symbolId,
 		trailingAskPrice:      math.MaxUint64,
 		orders:                make(map[uint64]*Order),
@@ -122,7 +122,7 @@ func (orderBook *OrderBook) InsertLimitOrder(order *Order) {
 	if order.IsAsk() {
 		lvlPtr = orderBook.askLevels.EmplaceWithHint(order.price, Ask, order.symbolId, orderBook.askLevels.GetMapBegin())
 	} else {
-		lvlPtr = orderBook.bidLevels.EmplaceWithHint(order.price, Bid, order.symbolId, orderBook.askLevels.GetMapEnd())
+		lvlPtr = orderBook.bidLevels.EmplaceWithHint(order.price, Bid, order.symbolId, orderBook.bidLevels.GetMapEnd())
 	}
 	order.levelPtr = lvlPtr
 	orderBook.orders[order.id] = order
@@ -311,6 +311,7 @@ func (orderBook *OrderBook) DelOrder(orderId uint64) {
 	orderBook.ValidateOrderbook()
 }
 
+// Use this if we dont want to immediately try activating stop orders
 func (orderBook *OrderBook) DeleteOrder(orderId uint64, noti bool) {
 	order := orderBook.orders[orderId]
 	if order.orderType == Market {
@@ -354,6 +355,22 @@ func (orderBook *OrderBook) DeleteOrder(orderId uint64, noti bool) {
 
 }
 
+func (orderBook *OrderBook) ReplaceOrder(orderId uint64, newOrderId uint64, newPrice uint64) {
+	order := orderBook.orders[orderId]
+	newOrder := *order
+	newOrder.id = newOrderId
+	if order.IsStop() || order.IsStopLimit() || order.IsTrailingStop() {
+		newOrder.stopPrice = newPrice
+
+	} else {
+		newOrder.price = newPrice
+	}
+	orderBook.DeleteOrder(orderId, true)
+	orderBook.AddOrder(&newOrder)
+	orderBook.ActivateStopOrders()
+	orderBook.ValidateOrderbook()
+}
+
 func (orderBook *OrderBook) Match(order *Order) {
 	if order.IsFillOrKill() && !orderBook.CanMatch(order) {
 		fmt.Println("Order is a Fill or Kill that could not be matched")
@@ -391,6 +408,52 @@ func (orderBook *OrderBook) Match(order *Order) {
 		}
 		orderBook.askLevels.SetMapBegin()
 	}
+}
+
+func (orderBook *OrderBook) ExecuteOrderWithSpecifiedPrice(orderId uint64, quantity uint64, price uint64) {
+	order := orderBook.orders[orderId]
+	executingLevel := order.levelPtr
+	executingQuantity := simplemath.Min(quantity, order.GetOpenQuantity())
+	order.ExecuteOrder(executingQuantity, price)
+	orderBook.lastExecutedPrice = price
+	// Handle order executed
+	executingLevel.ReduceVolume(order.GetLastExecutedQuantity())
+	if order.IsFilled() {
+		orderBook.DeleteOrder(orderId, true)
+	}
+	orderBook.ActivateStopOrders()
+	orderBook.ValidateOrderbook()
+}
+
+// For market orders
+func (orderBook *OrderBook) ExecuteOrderWithoutSpecifiedPrice(orderId uint64, quantity uint64) {
+	order := orderBook.orders[orderId]
+	executingLevel := order.levelPtr
+	executingQuantity := simplemath.Min(quantity, order.GetOpenQuantity())
+	price := order.GetPrice()
+	order.ExecuteOrder(executingQuantity, price)
+	orderBook.lastExecutedPrice = price
+	// Handle order executed
+	executingLevel.ReduceVolume(order.GetLastExecutedQuantity())
+	if order.IsFilled() {
+		orderBook.DeleteOrder(orderId, true)
+	}
+	orderBook.ActivateStopOrders()
+	orderBook.ValidateOrderbook()
+}
+
+func (orderBook *OrderBook) CancelOrder(orderId uint64, cancellingQuantity uint64) {
+	order := orderBook.orders[orderId]
+	cancellingLevel := order.levelPtr
+	preCancelQuantity := order.GetOpenQuantity()
+	order.ReduceQuantity(cancellingQuantity)
+	// Handle order cancelled
+	cancellingLevel.ReduceVolume(preCancelQuantity - order.GetOpenQuantity())
+	if order.IsFilled() {
+		orderBook.DeleteOrder(orderId, true)
+	}
+	orderBook.ActivateStopOrders()
+	orderBook.ValidateOrderbook()
 }
 
 func (orderBook *OrderBook) ExecuteOrders(askOrder *Order, bidOrder *Order, executingPrice uint64) {
@@ -443,12 +506,12 @@ func (orderBook *OrderBook) ValidateLimitOrders() {
 		currBestAsk = orderBook.askLevels.GetMapBegin().Value.(*Level).price
 	}
 	if orderBook.bidLevels.IsEmpty() {
-		currBestBid = math.MaxUint64
+		currBestBid = 0
 	} else {
-		currBestBid = orderBook.askLevels.GetMapEnd().Value.(*Level).price
+		currBestBid = orderBook.bidLevels.GetMapEnd().Value.(*Level).price
 	}
-	if currBestAsk > currBestBid {
-		panic("Best Ask should never be greater than best Bid")
+	if !(currBestAsk > currBestBid) {
+		panic("Best bid price should never be lower than best ask price!")
 	}
 
 	orderBook.askLevels.SetMapBegin()
@@ -462,7 +525,7 @@ func (orderBook *OrderBook) ValidateLimitOrders() {
 			panic("The price of the limit level does not match with its key")
 		}
 		if level.levelSide != Ask {
-			panic("Limit evel with Bid side is in the ask side of the book")
+			panic("Limit level with Bid side is in the ask side of the book")
 		}
 		for ord := level.orders.Front(); ord != nil; ord = ord.Next() {
 			order := ord.Value.(*Order)
@@ -668,6 +731,35 @@ func (orderBook *OrderBook) String() string {
 	itr = orderBook.trailingStopAskLevels.levelMapIterator
 	for itr.Next() {
 		bookString.WriteString(itr.Value().(*Level).String())
+	}
+
+	return bookString.String()
+}
+
+func (orderBook *OrderBook) OrderbookString() string {
+	var bookString strings.Builder
+
+	//Set iterator
+	var itr rbt.Iterator
+
+	// Bid orders
+	bookString.WriteString("BID ORDERS\n")
+	orderBook.bidLevels.SetMapBegin()
+	itr = orderBook.bidLevels.levelMapIterator
+	var count int = 0
+	for itr.Next() && count < 5 {
+		bookString.WriteString(itr.Value().(*Level).String())
+		count++
+	}
+
+	// Ask orders
+	count = 0
+	bookString.WriteString("ASK ORDERS\n")
+	orderBook.askLevels.SetMapBegin()
+	itr = orderBook.askLevels.levelMapIterator
+	for itr.Next() && count < 5 {
+		bookString.WriteString(itr.Value().(*Level).String())
+		count++
 	}
 
 	return bookString.String()
