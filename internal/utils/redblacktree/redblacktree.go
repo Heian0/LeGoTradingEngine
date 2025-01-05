@@ -117,6 +117,7 @@ func (tree *Tree) PutWithHint(key interface{}, value interface{}, hint *Node) {
 		loop := true
 		for loop {
 			compare := tree.Comparator(key, node.Key)
+			fmt.Println(compare)
 			switch {
 			case compare == 0:
 				node.Key = key

@@ -1,6 +1,8 @@
 syntax = "proto3";
 package exchange;
 
+option go_package = "./exchange";
+
 enum Command {
     ADD = 0;  // The default value
     DELETE = 1;
@@ -49,6 +51,26 @@ message OrderResponseMessage {
     string exchangeStatus = 1;
 }
 
+message SubscribeRequest {
+    uint64 symbolId = 1;  // Identifier for the specific orderbook
+}
+
+message Level {
+    uint64 price = 1;
+    uint64 quantity = 2;
+}
+
+message OrderBookState {
+    repeated Level bids = 1;
+    repeated Level asks = 2;
+    uint64 lastExecutedPrice = 3;
+    uint64 bestBid = 4;
+    uint64 bestAsk = 5;
+    uint64 spread = 6;
+}
+
 service ExchangeService {
     rpc HandleOrder(OrderMessage) returns (OrderResponseMessage) {}
+
+    rpc SubscribeToOrderBook(SubscribeRequest) returns (stream OrderBookState) {}
 }

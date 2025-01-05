@@ -67,6 +67,14 @@ func (level Level) GetOrdersConst() *list.List {
 }
 */
 
+func (level *Level) GetPrice() uint64 {
+	return level.price
+}
+
+func (level *Level) GetVolume() uint64 {
+	return level.volume
+}
+
 func (level *Level) AddOrder(order *Order) {
 	if level.levelSide != order.orderSide {
 		print("Order is not on the same side as level")

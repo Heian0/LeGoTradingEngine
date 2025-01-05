@@ -1,6 +1,7 @@
 package orderbook
 
 import (
+	"container/list"
 	"fmt"
 	"math"
 	"strconv"
@@ -117,12 +118,13 @@ func (orderBook *OrderBook) AddStopOrder(order *Order) {
 	}
 }
 
+// Emplace with hint breaking order logic, fix later
 func (orderBook *OrderBook) InsertLimitOrder(order *Order) {
 	var lvlPtr *Level
 	if order.IsAsk() {
-		lvlPtr = orderBook.askLevels.EmplaceWithHint(order.price, Ask, order.symbolId, orderBook.askLevels.GetMapBegin())
+		lvlPtr = orderBook.askLevels.Emplace(order.price, Ask, order.symbolId)
 	} else {
-		lvlPtr = orderBook.bidLevels.EmplaceWithHint(order.price, Bid, order.symbolId, orderBook.bidLevels.GetMapEnd())
+		lvlPtr = orderBook.bidLevels.Emplace(order.price, Bid, order.symbolId)
 	}
 	order.levelPtr = lvlPtr
 	orderBook.orders[order.id] = order
@@ -376,6 +378,7 @@ func (orderBook *OrderBook) Match(order *Order) {
 		fmt.Println("Order is a Fill or Kill that could not be matched")
 		return
 	}
+	print("order being matched\n")
 	if order.IsAsk() {
 		orderBook.bidLevels.SetMapEnd()
 		bidLevelsIt := orderBook.bidLevels.levelMapIterator
@@ -462,6 +465,9 @@ func (orderBook *OrderBook) ExecuteOrders(askOrder *Order, bidOrder *Order, exec
 	bidOrder.ExecuteOrder(matchedQuantity, executingPrice)
 	// Handle Ask order execution
 	// Handle Bid order execution
+	print("Order being executed at price:\n")
+	print(executingPrice)
+	print("\n")
 	orderBook.lastExecutedPrice = executingPrice
 }
 
@@ -497,6 +503,51 @@ func (orderBook *OrderBook) ValidateOrderbook() {
 	orderBook.ValidateTrailingStopOrders()
 }
 
+/*
+else {
+	currBestAsk = orderBook.askLevels.GetMapBegin().Value.(*Level).price
+}
+if orderBook.bidLevels.IsEmpty() {
+	currBestBid = 0
+} else {
+	currBestBid = orderBook.bidLevels.GetMapEnd().Value.(*Level).price
+}
+*/
+
+func (orderBook *OrderBook) GetBestBid() *Level {
+	bestBid := orderBook.bidLevels.GetMapEnd()
+	// Default
+	if bestBid == nil {
+		print("No Bid orders exist - a default value was used\n")
+		return &Level{
+			levelSide: Bid,
+			price:     0,
+			symbolId:  0,
+			volume:    0,
+			orders:    list.New(),
+		}
+	}
+	return bestBid.Value.(*Level)
+}
+
+func (orderBook *OrderBook) GetBestAsk() *Level {
+
+	bestAsk := orderBook.askLevels.GetMapBegin()
+
+	// Default - can cosider logging defaults
+	if bestAsk == nil {
+		print("No Ask orders exist - a default value was used\n")
+		return &Level{
+			levelSide: Ask,
+			price:     math.MaxUint64,
+			symbolId:  0,
+			volume:    0,
+			orders:    list.New(),
+		}
+	}
+	return bestAsk.Value.(*Level)
+}
+
 func (orderBook *OrderBook) ValidateLimitOrders() {
 	var currBestBid uint64
 	var currBestAsk uint64
@@ -510,7 +561,9 @@ func (orderBook *OrderBook) ValidateLimitOrders() {
 	} else {
 		currBestBid = orderBook.bidLevels.GetMapEnd().Value.(*Level).price
 	}
-	if !(currBestAsk > currBestBid) {
+	if !(currBestAsk >= currBestBid) {
+		print(currBestAsk)
+		print(currBestBid)
 		panic("Best bid price should never be lower than best ask price!")
 	}
 
@@ -536,11 +589,12 @@ func (orderBook *OrderBook) ValidateLimitOrders() {
 				panic("There is a non Limit type order in a Limit level")
 			}
 		}
+
 	}
 
-	orderBook.bidLevels.SetMapBegin()
+	orderBook.bidLevels.SetMapEnd()
 	itr = orderBook.bidLevels.levelMapIterator
-	for itr.Next() {
+	for itr.Prev() {
 		level := itr.Value().(*Level)
 		if level.Empty() {
 			panic("There should be no limit empty levels in the orderbook")
@@ -677,6 +731,30 @@ func (orderBook *OrderBook) ValidateTrailingStopOrders() {
 	}
 }
 
+func (orderBook *OrderBook) GetTopNBids(n int) []*Level {
+	topNBids := []*Level{}
+	orderBook.bidLevels.SetMapEnd()
+	itr := orderBook.bidLevels.levelMapIterator
+	var count int = 0
+	for itr.Prev() && count < n {
+		topNBids = append(topNBids, itr.Value().(*Level))
+		count++
+	}
+	return topNBids
+}
+
+func (orderBook *OrderBook) GetTopNAsks(n int) []*Level {
+	topNAsks := []*Level{}
+	orderBook.askLevels.SetMapBegin()
+	itr := orderBook.askLevels.levelMapIterator
+	var count int = 0
+	for itr.Next() && count < n {
+		topNAsks = append(topNAsks, itr.Value().(*Level))
+		count++
+	}
+	return topNAsks
+}
+
 func (orderBook *OrderBook) String() string {
 	var bookString strings.Builder
 	bookString.WriteString("SYMBOL ID : " + strconv.FormatUint(orderBook.symbolId, 10) + "\n")
@@ -747,7 +825,7 @@ func (orderBook *OrderBook) OrderbookString() string {
 	orderBook.bidLevels.SetMapBegin()
 	itr = orderBook.bidLevels.levelMapIterator
 	var count int = 0
-	for itr.Next() && count < 5 {
+	for itr.Next() && count < 15 {
 		bookString.WriteString(itr.Value().(*Level).String())
 		count++
 	}
@@ -755,9 +833,9 @@ func (orderBook *OrderBook) OrderbookString() string {
 	// Ask orders
 	count = 0
 	bookString.WriteString("ASK ORDERS\n")
-	orderBook.askLevels.SetMapBegin()
+	orderBook.askLevels.SetMapEnd()
 	itr = orderBook.askLevels.levelMapIterator
-	for itr.Next() && count < 5 {
+	for itr.Prev() && count < 15 {
 		bookString.WriteString(itr.Value().(*Level).String())
 		count++
 	}
