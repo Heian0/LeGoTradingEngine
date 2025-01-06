@@ -1,7 +1,7 @@
 import sys
 import zmq
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QTableWidget, 
-                            QTableWidgetItem, QVBoxLayout, QWidget, QLabel)
+                            QTableWidgetItem, QVBoxLayout, QHBoxLayout, QWidget, QLabel)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QColor, QPalette
 
@@ -39,8 +39,8 @@ class StyledTableItem(QTableWidgetItem):
 class OrderBookWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("OrderBook Display")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle("LeGoTradingEngine Orderbook Display")
+        self.setGeometry(100, 100, 1000, 600)
         
         # Set dark theme
         self.setStyleSheet("""
@@ -74,12 +74,16 @@ class OrderBookWindow(QMainWindow):
             }
         """)
 
-        # Create main widget and layout
+        # Create main widget and horizontal layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
-        layout.setSpacing(10)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QHBoxLayout(main_widget)
+
+        # Create left widget for orderbook
+        orderbook_widget = QWidget()
+        orderbook_layout = QVBoxLayout(orderbook_widget)
+        orderbook_layout.setSpacing(10)
+        orderbook_layout.setContentsMargins(20, 20, 20, 20)
 
         # Add labels with updated styling
         asks_label = QLabel("ASKS (SELL ORDERS)")
@@ -100,12 +104,36 @@ class OrderBookWindow(QMainWindow):
             table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
             table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-        # Add widgets to layout with some spacing
-        layout.addWidget(asks_label)
-        layout.addWidget(self.asks_table)
-        layout.addSpacing(20)
-        layout.addWidget(bids_label)
-        layout.addWidget(self.bids_table)
+        # Add orderbook widgets to left layout
+        orderbook_layout.addWidget(asks_label)
+        orderbook_layout.addWidget(self.asks_table)
+        orderbook_layout.addSpacing(20)
+        orderbook_layout.addWidget(bids_label)
+        orderbook_layout.addWidget(self.bids_table)
+
+        # Create right widget for metrics
+        metrics_widget = QWidget()
+        metrics_layout = QVBoxLayout(metrics_widget)
+        metrics_layout.setSpacing(10)
+        metrics_layout.setContentsMargins(20, 20, 20, 20)
+
+        # Create labels for metrics
+        metrics_label = QLabel("MARKET METRICS")
+        metrics_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.last_price = QLabel("Last Price: --")
+        self.best_bid = QLabel("Best Bid: --")
+        self.best_ask = QLabel("Best Ask: --")
+        self.spread = QLabel("Spread: --")
+
+        # Add metrics to right layout
+        metrics_layout.addWidget(metrics_label)
+        for label in [self.last_price, self.best_bid, self.best_ask, self.spread]:
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            metrics_layout.addWidget(label)
+        
+        # Add both widgets to main layout
+        main_layout.addWidget(orderbook_widget, 2)
+        main_layout.addWidget(metrics_widget, 1)
 
         # Setup ZMQ worker
         self.worker = OrderBookWorker()
@@ -128,6 +156,12 @@ class OrderBookWindow(QMainWindow):
         # Adjust columns to content
         self.asks_table.resizeColumnsToContents()
         self.bids_table.resizeColumnsToContents()
+
+        # Update other metrics
+        self.last_price.setText(f"Last Executed Price: {state.lastExecutedPrice}")
+        self.best_bid.setText(f"Best Bid: {state.bestBid}")
+        self.best_ask.setText(f"Best Ask: {state.bestAsk}")
+        self.spread.setText(f"Spread: {state.spread}")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -75,7 +75,7 @@ class RealtimeOrderGenerator:
     def __init__(self, price_simulator: 'SPYSimulator'):
         self.simulator = price_simulator
         self.minutes_per_day = 390
-        self.orders_per_second = 2
+        self.orders_per_second = 1000000
         self.interval = 1.0 / self.orders_per_second  # Time between orders
 
         # Setup gRPC connection
@@ -101,7 +101,10 @@ class RealtimeOrderGenerator:
                         
                         # Send order via gRPC
                         try:
+                            send_time = time.time()
                             response = self.stub.HandleOrder(order)
+                            response_time = time.time() - send_time
+                            print(f"Response time: {response_time} seconds")
                             side = "BUY" if order.orderSide == Side.BID else "SELL"
                             price_dollars = order.price / 100
                             print(response.exchangeStatus)
