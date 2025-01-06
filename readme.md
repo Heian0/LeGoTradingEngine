@@ -9,7 +9,15 @@
 - It uses an ordered map (implemented with a Red-Black Tree) for price levels, allowing the system to efficiently determine the best bid/ask levels.
 - Lookups, insertion, and deletion all run in logarithmic time.
 - One latency related con is that iterating through the ordered map is a sequential operation, which can be slower compared to data structures optimized for cache locality like a sorted vector/array.
+  # Live Example
 
+https://github.com/user-attachments/assets/c32e0ffd-e74d-426d-95d0-8fefe8707e89
+
+Below is the response and the response time for the Python based GBM market simulator sending 1000000 orders per second to recieve the market state after sending an order.
+![image](https://github.com/user-attachments/assets/ec17017d-a110-47bf-9ee0-b938e3d928f9)
+
+This is the client which receives market data that is packaged by the exchange. The time shown is how long it has taken for this update to reach the client since subscribing to the orderbook (should be in line with how long the it has been since the orderbook was subscribed to in real time)
+![image](https://github.com/user-attachments/assets/08d06b56-7288-4b0c-81c9-1ed89456fb6c)
 
 
 
