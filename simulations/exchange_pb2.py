@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xchange.proto\x12\x08\x65xchange\"\xec\x02\n\x0cOrderMessage\x12\"\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x11.exchange.Command\x12&\n\torderType\x18\x02 \x01(\x0e\x32\x13.exchange.OrderType\x12!\n\torderSide\x18\x03 \x01(\x0e\x32\x0e.exchange.Side\x12\x34\n\x10orderTimeInForce\x18\x04 \x01(\x0e\x32\x1a.exchange.OrderTimeInForce\x12\n\n\x02id\x18\x05 \x01(\x04\x12\x10\n\x08symbolId\x18\x06 \x01(\x04\x12\r\n\x05price\x18\x07 \x01(\x04\x12\x11\n\tstopPrice\x18\x08 \x01(\x04\x12\x16\n\x0etrailingAmount\x18\t \x01(\x04\x12\x19\n\x11lastExecutedPrice\x18\n \x01(\x04\x12\x10\n\x08quantity\x18\x0b \x01(\x04\x12\x14\n\x0copenQuantity\x18\x0c \x01(\x04\x12\x1c\n\x14lastExecutedQuantity\x18\r \x01(\x04\".\n\x14OrderResponseMessage\x12\x16\n\x0e\x65xchangeStatus\x18\x01 \x01(\t\"$\n\x10SubscribeRequest\x12\x10\n\x08symbolId\x18\x01 \x01(\x04\"(\n\x05Level\x12\r\n\x05price\x18\x01 \x01(\x04\x12\x10\n\x08quantity\x18\x02 \x01(\x04\"\x9b\x01\n\x0eOrderBookState\x12\x1d\n\x04\x62ids\x18\x01 \x03(\x0b\x32\x0f.exchange.Level\x12\x1d\n\x04\x61sks\x18\x02 \x03(\x0b\x32\x0f.exchange.Level\x12\x19\n\x11lastExecutedPrice\x18\x03 \x01(\x04\x12\x0f\n\x07\x62\x65stBid\x18\x04 \x01(\x04\x12\x0f\n\x07\x62\x65stAsk\x18\x05 \x01(\x04\x12\x0e\n\x06spread\x18\x06 \x01(\x04*7\n\x07\x43ommand\x12\x07\n\x03\x41\x44\x44\x10\x00\x12\n\n\x06\x44\x45LETE\x10\x01\x12\x0b\n\x07REPLACE\x10\x02\x12\n\n\x06\x43\x41NCEL\x10\x03*h\n\tOrderType\x12\t\n\x05LIMIT\x10\x00\x12\n\n\x06MARKET\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\x0e\n\nSTOP_LIMIT\x10\x03\x12\x11\n\rTRAILING_STOP\x10\x04\x12\x17\n\x13TRAILING_STOP_LIMIT\x10\x05*-\n\x10OrderTimeInForce\x12\x07\n\x03GTC\x10\x00\x12\x07\n\x03IOC\x10\x01\x12\x07\n\x03\x46OK\x10\x02*\x18\n\x04Side\x12\x07\n\x03\x42ID\x10\x00\x12\x07\n\x03\x41SK\x10\x01\x32\xac\x01\n\x0f\x45xchangeService\x12G\n\x0bHandleOrder\x12\x16.exchange.OrderMessage\x1a\x1e.exchange.OrderResponseMessage\"\x00\x12P\n\x14SubscribeToOrderBook\x12\x1a.exchange.SubscribeRequest\x1a\x18.exchange.OrderBookState\"\x00\x30\x01\x42\x0cZ\n./exchangeb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xchange.proto\x12\x08\x65xchange\"\xec\x02\n\x0cOrderMessage\x12\"\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x11.exchange.Command\x12&\n\torderType\x18\x02 \x01(\x0e\x32\x13.exchange.OrderType\x12!\n\torderSide\x18\x03 \x01(\x0e\x32\x0e.exchange.Side\x12\x34\n\x10orderTimeInForce\x18\x04 \x01(\x0e\x32\x1a.exchange.OrderTimeInForce\x12\n\n\x02id\x18\x05 \x01(\x04\x12\x10\n\x08symbolId\x18\x06 \x01(\x04\x12\r\n\x05price\x18\x07 \x01(\x04\x12\x11\n\tstopPrice\x18\x08 \x01(\x04\x12\x16\n\x0etrailingAmount\x18\t \x01(\x04\x12\x19\n\x11lastExecutedPrice\x18\n \x01(\x04\x12\x10\n\x08quantity\x18\x0b \x01(\x04\x12\x14\n\x0copenQuantity\x18\x0c \x01(\x04\x12\x1c\n\x14lastExecutedQuantity\x18\r \x01(\x04\".\n\x14OrderResponseMessage\x12\x16\n\x0e\x65xchangeStatus\x18\x01 \x01(\t\"$\n\x10SubscribeRequest\x12\x10\n\x08symbolId\x18\x01 \x01(\x04\"(\n\x05Level\x12\r\n\x05price\x18\x01 \x01(\x04\x12\x10\n\x08quantity\x18\x02 \x01(\x04\"\xae\x01\n\x0eOrderBookState\x12\x1d\n\x04\x62ids\x18\x01 \x03(\x0b\x32\x0f.exchange.Level\x12\x1d\n\x04\x61sks\x18\x02 \x03(\x0b\x32\x0f.exchange.Level\x12\x19\n\x11lastExecutedPrice\x18\x03 \x01(\x04\x12\x0f\n\x07\x62\x65stBid\x18\x04 \x01(\x04\x12\x0f\n\x07\x62\x65stAsk\x18\x05 \x01(\x04\x12\x0e\n\x06spread\x18\x06 \x01(\x04\x12\x11\n\ttimestamp\x18\x07 \x01(\x03*7\n\x07\x43ommand\x12\x07\n\x03\x41\x44\x44\x10\x00\x12\n\n\x06\x44\x45LETE\x10\x01\x12\x0b\n\x07REPLACE\x10\x02\x12\n\n\x06\x43\x41NCEL\x10\x03*h\n\tOrderType\x12\t\n\x05LIMIT\x10\x00\x12\n\n\x06MARKET\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\x0e\n\nSTOP_LIMIT\x10\x03\x12\x11\n\rTRAILING_STOP\x10\x04\x12\x17\n\x13TRAILING_STOP_LIMIT\x10\x05*-\n\x10OrderTimeInForce\x12\x07\n\x03GTC\x10\x00\x12\x07\n\x03IOC\x10\x01\x12\x07\n\x03\x46OK\x10\x02*\x18\n\x04Side\x12\x07\n\x03\x42ID\x10\x00\x12\x07\n\x03\x41SK\x10\x01\x32\xac\x01\n\x0f\x45xchangeService\x12G\n\x0bHandleOrder\x12\x16.exchange.OrderMessage\x1a\x1e.exchange.OrderResponseMessage\"\x00\x12P\n\x14SubscribeToOrderBook\x12\x1a.exchange.SubscribeRequest\x1a\x18.exchange.OrderBookState\"\x00\x30\x01\x42\x0cZ\n./exchangeb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,14 +32,14 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'exchange_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\n./exchange'
-  _globals['_COMMAND']._serialized_start=681
-  _globals['_COMMAND']._serialized_end=736
-  _globals['_ORDERTYPE']._serialized_start=738
-  _globals['_ORDERTYPE']._serialized_end=842
-  _globals['_ORDERTIMEINFORCE']._serialized_start=844
-  _globals['_ORDERTIMEINFORCE']._serialized_end=889
-  _globals['_SIDE']._serialized_start=891
-  _globals['_SIDE']._serialized_end=915
+  _globals['_COMMAND']._serialized_start=700
+  _globals['_COMMAND']._serialized_end=755
+  _globals['_ORDERTYPE']._serialized_start=757
+  _globals['_ORDERTYPE']._serialized_end=861
+  _globals['_ORDERTIMEINFORCE']._serialized_start=863
+  _globals['_ORDERTIMEINFORCE']._serialized_end=908
+  _globals['_SIDE']._serialized_start=910
+  _globals['_SIDE']._serialized_end=934
   _globals['_ORDERMESSAGE']._serialized_start=29
   _globals['_ORDERMESSAGE']._serialized_end=393
   _globals['_ORDERRESPONSEMESSAGE']._serialized_start=395
@@ -49,7 +49,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LEVEL']._serialized_start=481
   _globals['_LEVEL']._serialized_end=521
   _globals['_ORDERBOOKSTATE']._serialized_start=524
-  _globals['_ORDERBOOKSTATE']._serialized_end=679
-  _globals['_EXCHANGESERVICE']._serialized_start=918
-  _globals['_EXCHANGESERVICE']._serialized_end=1090
+  _globals['_ORDERBOOKSTATE']._serialized_end=698
+  _globals['_EXCHANGESERVICE']._serialized_start=937
+  _globals['_EXCHANGESERVICE']._serialized_end=1109
 # @@protoc_insertion_point(module_scope)

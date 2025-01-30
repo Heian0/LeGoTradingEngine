@@ -67,6 +67,7 @@ message OrderBookState {
     uint64 bestBid = 4;
     uint64 bestAsk = 5;
     uint64 spread = 6;
+    int64 timestamp = 7;
 }
 
 service ExchangeService {

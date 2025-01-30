@@ -9,6 +9,7 @@ from exchange_pb2_grpc import ExchangeServiceStub
 import sys
 import time
 import grpc
+import multiprocessing
 
 class SPYSimulator:
     def __init__(self):
@@ -72,16 +73,16 @@ class SPYSimulator:
         plt.close()
 
 class RealtimeOrderGenerator:
-    def __init__(self, price_simulator: 'SPYSimulator'):
+    def __init__(self, price_simulator: 'SPYSimulator', order_per_s: int, address: str):
         self.simulator = price_simulator
         self.minutes_per_day = 390
-        self.orders_per_second = 1000000
+        self.orders_per_second = order_per_s
         self.interval = 1.0 / self.orders_per_second  # Time between orders
 
         # Setup gRPC connection
-        self.channel = grpc.insecure_channel('localhost:9000')
+        self.channel = grpc.insecure_channel(address)
         self.stub = ExchangeServiceStub(self.channel)
-        print("Connected to order service at localhost:9000")
+        print("Connected to order service at " + address)
         
     def run_continuously(self):
         try:
@@ -105,10 +106,7 @@ class RealtimeOrderGenerator:
                             response = self.stub.HandleOrder(order)
                             response_time = time.time() - send_time
                             print(f"Response time: {response_time} seconds")
-                            side = "BUY" if order.orderSide == Side.BID else "SELL"
-                            price_dollars = order.price / 100
                             print(response.exchangeStatus)
-                            #print(f"{timestamp} - {side} {order.quantity} @ {price_dollars:.2f}")
                         except grpc.RpcError as e:
                             print(f"Failed to send order: {e}")
                             
@@ -172,46 +170,40 @@ class RealtimeOrderGenerator:
         return order
 
 if __name__ == "__main__":
-    # Initialize simulator
-    sim = SPYSimulator()
-    
-    # Generate and plot multiple paths
-    sim.plot_simulation()
-    
-    # Generate single path for minute-by-minute prices
-    prices = sim.simulate_path()
-    
-    # Print some statistics
-    print(f"\nSimulation statistics:")
-    print(f"Min price: ${min(prices):.2f}")
-    print(f"Max price: ${max(prices):.2f}")
-    print(f"Mean price: ${np.mean(prices):.2f}")
-    print(f"Final price: ${prices[-1]:.2f}")
 
-    """
-    # Initialize simulator and generator
-    sim = SPYSimulator()
-    generator = OrderGenerator(sim)
-    
-    # Generate orders for one day
-    orders = generator.generate_limit_orders()
-    
-    # Print first 10 orders
-    print("\nFirst 10 orders:")
-    for order in orders[:10]:
-        side = "BUY" if order.orderSide == Side.BID else "SELL"
-        price_dollars = order.price / 100
-        print(f"{side}: {order.quantity} shares @ ${price_dollars:.2f}")
-        
-    # Print some statistics
-    print(f"\nTotal orders generated: {len(orders)}")
-    print(f"Average order size: {np.mean([o.quantity for o in orders]):.0f} shares")
-    buy_orders = [o for o in orders if o.orderSide == Side.BID]
-    sell_orders = [o for o in orders if o.orderSide == Side.ASK]
-    print(f"Buy orders: {len(buy_orders)}")
-    print(f"Sell orders: {len(sell_orders)}")
-    """
+    # Check if any argument was passed
+    if len(sys.argv) > 1:
 
-    sim = SPYSimulator()
-    generator = RealtimeOrderGenerator(sim)
-    generator.run_continuously()
+        sim_id = sys.argv[1]
+        try:
+            order_per_s = int(sys.argv[2])
+        except ValueError:
+            print("Enter a valid orders per second as a integer.")
+
+        if sim_id == "1":
+
+            print("Simulating real-time market noise for SPY.")
+
+            sim = SPYSimulator()
+            generator = RealtimeOrderGenerator(sim, order_per_s, 'localhost:9000')
+            generator.run_continuously()
+
+        elif sim_id == "2":
+            print("Simulating orders on two exchanges that provide an arbitrage opportunity.")
+            
+            sim1 = SPYSimulator()
+            generator1 = RealtimeOrderGenerator(sim1, order_per_s, 'localhost:9000')
+
+            sim2 = SPYSimulator()
+            generator2 = RealtimeOrderGenerator(sim2, order_per_s, 'localhost:9001')
+
+            process_1 = multiprocessing.Process(target=generator1.run_continuously)
+            process_2 = multiprocessing.Process(target=generator2.run_continuously)
+            
+            process_1.start()
+            process_2.start()
+
+        else:
+            print(f"Unknown simulation id. Please enter simulation id: 1 = Basic (SPY Orderbook only), 2 = Arbitrage Simulation.")
+    else:
+        print("Please enter the number corresponding to the simulation you are trying to run. 1 = Basic (SPY Orderbook only), 2 = Arbitrage Simulation.")

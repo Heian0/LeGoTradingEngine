@@ -1,5 +1,9 @@
 import sys
 import zmq
+import mmap
+import time
+import os
+import struct
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QTableWidget, 
                             QTableWidgetItem, QVBoxLayout, QHBoxLayout, QWidget, QLabel)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
@@ -8,26 +12,44 @@ from PyQt6.QtGui import QColor, QPalette
 # Import your generated protobuf code
 from exchange_pb2 import OrderBookState  
 
+
 class OrderBookWorker(QThread):
     update_signal = pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
-        self.context = zmq.Context()
-        self.subscriber = self.context.socket(zmq.SUB)
-        self.subscriber.connect("tcp://localhost:5555")
-        self.subscriber.setsockopt_string(zmq.SUBSCRIBE, "")
-        self.subscriber.set_hwm(1000)  # High water mark to prevent memory issues
-
+        self.fd = os.open("/tmp/MarketDataAggregatorMem", os.O_RDWR)  # Match the exact path from Go
+        self.shared_mem = mmap.mmap(self.fd, 65536, mmap.MAP_SHARED)
+        
     def run(self):
+        last_content = None
         while True:
             try:
-                data = self.subscriber.recv()  # Receive raw bytes
-                state = OrderBookState()
-                state.ParseFromString(data)  # Parse protobuf message
-                self.update_signal.emit(state)
+                # Read size first (4 bytes for uint32)
+                self.shared_mem.seek(0)
+                size_bytes = self.shared_mem.read(4)
+                size = struct.unpack('<I', size_bytes)[0]  # Little endian uint32
+                
+                # Read the actual data
+                content = self.shared_mem.read(size)
+                
+                if content != last_content:
+                    state = OrderBookState()
+                    state.ParseFromString(content)
+                    self.update_signal.emit(state)
+                    last_content = content
+                    
             except Exception as e:
-                print(f"Error receiving data: {e}")
+                print(f"Error reading shared memory: {e}")
+                print(f"Size read: {size if 'size' in locals() else 'unknown'}")
+                if 'content' in locals():
+                    print(f"Content length: {len(content)}")
+                
+            time.sleep(0.001)
+
+    def close(self):
+        self.shared_mem.close()
+        os.close(self.fd)
 
 class StyledTableItem(QTableWidgetItem):
     def __init__(self, text, is_bid=True):

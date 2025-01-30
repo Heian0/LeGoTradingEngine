@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -11,6 +12,7 @@ import (
 
 	ob "github.com/Heian0/LeGoTradingEngine/internal/orderbook"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // Strict Validation Exchange - will not accept an order for a non supported security
@@ -25,6 +27,7 @@ type Exchange struct {
 	Mu       sync.RWMutex
 	updateCh chan struct{}
 
+	udpConn *net.UDPConn
 	clients sync.Map
 }
 
@@ -41,24 +44,14 @@ func NewUpdateChannel() *UpdateChannel {
 	}
 }
 
+func (exchange *Exchange) SetupBroadcaster(conn *net.UDPConn) {
+	exchange.udpConn = conn
+}
+
 type ClientMetrics struct {
 	clientId   string
 	latency    time.Duration
 	bufferSize int
-}
-
-type LevelStateData struct {
-	price    uint64
-	quantity uint64
-}
-
-type OrderBookStateData struct {
-	Bids              []*LevelStateData
-	Asks              []*LevelStateData
-	LastExecutedPrice uint64
-	BestBid           uint64
-	BestAsk           uint64
-	Spread            uint64
 }
 
 func (exchange *Exchange) HasOrderBook(symbolId uint64) bool {
@@ -145,19 +138,34 @@ func (obs *OrderBookState) ObsToString() string {
 
 func (exchange *Exchange) NotifyClients(symbolId uint64) {
 	state := exchange.GetOrderBookState(symbolId)
+	state.Timestamp = time.Now().UnixNano()
+	// Serialize the state
+	data, err := proto.Marshal(state)
+	if err != nil {
+		log.Printf("Error marshaling state: %v", err)
+		return
+	}
 
-	exchange.clients.Range(func(key, value interface{}) bool {
-		updateCh := value.(*UpdateChannel)
-		updateCh.latestState.Store(state)
-		updateCh.lastUpdateTime.Store(time.Now())
+	// Broadcast via UDP
+	_, err = exchange.udpConn.Write(data)
+	if err != nil {
+		log.Printf("Error broadcasting update: %v", err)
+	}
 
-		select {
-		case updateCh.ch <- state:
-		default:
-			exchange.ClearAndSendLatest(updateCh)
-		}
-		return true
-	})
+	/*
+		exchange.clients.Range(func(key, value interface{}) bool {
+			updateCh := value.(*UpdateChannel)
+			updateCh.latestState.Store(state)
+			updateCh.lastUpdateTime.Store(time.Now())
+
+			select {
+			case updateCh.ch <- state:
+			default:
+				exchange.ClearAndSendLatest(updateCh)
+			}
+			return true
+		})
+	*/
 }
 
 // SubscribeToOrderBook implements ExchangeServiceServer.
